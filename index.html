@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Copia & Salva Pro</title>
+    <meta name="theme-color" content="#165DFF">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- Firebase SDK (compat — funciona sem bundler) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36BFFA',
+                        accent: '#FF7D00',
+                        success: '#00B42A',
+                        danger: '#F53F3F',
+                        neutral: {
+                            50: '#F7F8FA', 100: '#F2F3F5', 200: '#E5E6EB',
+                            300: '#C9CDD4', 400: '#86909C', 500: '#4E5969',
+                            600: '#2E3440', 700: '#1E222C', 800: '#141414', 900: '#0A0A0A'
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'Segoe UI', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card { @apply bg-white dark:bg-neutral-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-300 border border-neutral-100 dark:border-neutral-700; }
+            .btn { @apply px-4 py-2 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-95; }
+            .btn-secondary { @apply bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200; }
+            .input-field { @apply w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary dark:text-white; }
+            .pasta-ativa { @apply bg-primary/10 border-primary; }
+        }
+    </style>
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translate3d(0, 12px, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translate3d(0, -8px, 0); }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translate3d(0, 100%, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .fade-in { animation: fadeInUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .item-card { will-change: opacity, transform; contain: layout style paint; }
+        .item-card.removing { animation: fadeOut 0.3s ease-in both; }
+        .modal-overlay { animation: fadeInUp 0.2s ease-out both; }
+        .modal-panel { animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        body, header, .card, .input-field, .btn-secondary {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        textarea { resize: none; }
+
+        /* Indicador de sincronização */
+        .sync-dot {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+            transition: background-color 0.3s ease;
+        }
+        .sync-dot.online { background-color: #00B42A; }
+        .sync-dot.offline { background-color: #F53F3F; }
+        .sync-dot.syncing { background-color: #FF7D00; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-900 min-h-screen font-sans text-neutral-800 dark:text-neutral-100">
+    <!-- Cabeçalho -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-700">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <i class="fa fa-copy text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">Copia & Salva Pro</h1>
+                    <div class="flex items-center gap-1.5">
+                        <span id="syncDot" class="sync-dot online"></span>
+                        <span id="syncText" class="text-[10px] text-neutral-400">Conectado</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="btnOpcoes" class="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center" title="Mais Opções">
+                    <i class="fa fa-ellipsis-v"></i>
+                </button>
+                <button id="toggleTema" class="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center" aria-label="Alternar tema">
+                    <i class="fa fa-moon-o dark:hidden"></i>
+                    <i class="fa fa-sun-o hidden dark:block text-yellow-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="container mx-auto px-4 py-5 pb-24">
+        <!-- Barra de Pastas -->
+        <section class="mb-5">
+            <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                <button onclick="selecionarPasta('todas')" class="btn btn-secondary text-sm whitespace-nowrap pasta-item pasta-ativa" data-pasta="todas">
+                    <i class="fa fa-th-large"></i> Tudo
+                </button>
+                <div id="listaPastas" class="flex gap-2"></div>
+                <button onclick="criarNovaPasta()" class="btn btn-secondary text-sm whitespace-nowrap">
+                    <i class="fa fa-plus"></i> Nova Pasta
+                </button>
+            </div>
+        </section>
+
+        <!-- Área de Entrada -->
+        <section class="card p-5 mb-6 fade-in">
+            <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                <i class="fa fa-edit text-primary"></i> Novo Conteúdo
+            </h2>
+            <textarea id="textoEntrada" placeholder="Digite, cole texto, links, códigos ou qualquer informação..." class="input-field h-36"></textarea>
+            <div class="mt-3">
+                <label class="text-sm font-medium mb-1.5 inline-block">Salvar na pasta:</label>
+                <select id="pastaSelecionada" class="input-field py-2.5 text-sm"></select>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+                <button onclick="copiarTexto()" class="btn btn-secondary"><i class="fa fa-copy"></i> Copiar</button>
+                <button onclick="colarTexto()" class="btn btn-secondary"><i class="fa fa-paste"></i> Colar</button>
+                <button onclick="salvarTexto()" class="btn bg-success hover:bg-success/90 text-white"><i class="fa fa-save"></i> Salvar</button>
+                <button onclick="compartilharConteudo()" class="btn bg-accent hover:bg-accent/90 text-white"><i class="fa fa-share-alt"></i> Compartilhar</button>
+            </div>
+        </section>
+
+        <!-- Área de Imagem -->
+        <section class="card p-5 mb-6 fade-in">
+            <h2 class="text-lg font-semibold mb-3 flex items-center gap-2">
+                <i class="fa fa-image text-primary"></i> Adicionar Imagem
+            </h2>
+            <input type="file" id="fotoEntrada" accept="image/*" class="hidden" onchange="processarFoto()">
+            <label for="fotoEntrada" class="block border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition-colors">
+                <i class="fa fa-camera text-4xl text-neutral-400 mb-3"></i>
+                <p class="font-medium">Toque para escolher imagem</p>
+                <p class="text-sm text-neutral-500 mt-1">Da galeria ou câmera</p>
+            </label>
+            <div id="previewFoto" class="mt-5 hidden">
+                <img id="imagemPreview" src="" alt="Prévia" class="w-full max-h-64 object-contain rounded-xl border border-neutral-200 dark:border-neutral-700">
+                <div class="flex gap-2.5 mt-4">
+                    <button onclick="salvarFoto()" class="btn bg-success hover:bg-success/90 text-white flex-1"><i class="fa fa-save"></i> Salvar</button>
+                    <button onclick="compartilharFoto()" class="btn bg-accent hover:bg-accent/90 text-white flex-1"><i class="fa fa-share-alt"></i> Compartilhar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lista de Conteúdos -->
+        <section class="card p-5 fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <i class="fa fa-folder-open text-primary"></i> Conteúdos Salvos
+                        <span id="contadorItens" class="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-xs font-medium">0</span>
+                    </h2>
+                </div>
+                <div class="w-full sm:w-auto">
+                    <input type="text" id="busca" placeholder="Buscar conteúdo..." class="input-field text-sm py-2">
+                </div>
+            </div>
+            <div id="listaSalvos" class="space-y-4 min-h-[120px]">
+                <div class="text-center py-10 text-neutral-500">
+                    <i class="fa fa-inbox text-4xl mb-3 opacity-30"></i>
+                    <p>Nenhum conteúdo salvo ainda</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Aviso / Notificação -->
+    <div id="notificacao" class="fixed bottom-6 left-1/2 z-50 pointer-events-none" style="transform: translate3d(-50%, 0, 0); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;">
+        <div class="bg-neutral-900/90 dark:bg-neutral-700/90 backdrop-blur-sm text-white px-6 py-3 rounded-xl shadow-xl flex items-center gap-2">
+            <i id="iconeNotif" class="fa fa-check-circle text-green-400"></i>
+            <span id="textoNotificacao" class="font-medium"></span>
+        </div>
+    </div>
+
+    <!-- Modal de Opções -->
+    <div id="modalOpcoes" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="fecharModalOpcoes()"></div>
+        <div class="modal-panel absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-3xl bg-white dark:bg-neutral-800 p-6 pb-8 shadow-2xl">
+            <div class="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600 mx-auto mb-5"></div>
+            <h2 class="text-lg font-bold mb-5">Mais Opções</h2>
+            <div class="mb-6">
+                <h3 class="font-semibold text-sm text-neutral-500 uppercase tracking-wider mb-3">Gerenciar Dados</h3>
+                <div class="space-y-2">
+                    <button onclick="exportarTexto()" class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors">
+                        <i class="fa fa-file-text-o text-primary w-5 text-center"></i>
+                        <span class="font-medium">Exportar como Texto</span>
+                    </button>
+                    <button onclick="criarBackup()" class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors">
+                        <i class="fa fa-shield text-primary w-5 text-center"></i>
+                        <span class="font-medium">Criar Cópia de Segurança</span>
+                    </button>
+                    <button onclick="restaurarBackup()" class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors">
+                        <i class="fa fa-upload text-primary w-5 text-center"></i>
+                        <span class="font-medium">Restaurar Dados</span>
+                    </button>
+                    <button onclick="apagarTudo()" class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors text-danger">
+                        <i class="fa fa-trash w-5 text-center"></i>
+                        <span class="font-medium">Apagar Tudo Permanentemente</span>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-semibold text-sm text-neutral-500 uppercase tracking-wider mb-3">Sobre o App</h3>
+                <p class="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">Versão 2.0 &bull; Dados sincronizados via Firebase. Acesse de qualquer dispositivo com o mesmo perfil.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Mover Item -->
+    <div id="modalMover" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="fecharModalMover()"></div>
+        <div class="modal-panel absolute bottom-0 left-0 right-0 rounded-t-3xl bg-white dark:bg-neutral-800 p-6 pb-8 shadow-2xl">
+            <div class="w-10 h-1 rounded-full bg-neutral-300 dark:bg-neutral-600 mx-auto mb-5"></div>
+            <h2 class="text-lg font-bold mb-4">Mover para Pasta</h2>
+            <div id="listaMoverPastas" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <input type="file" id="inputRestaurar" accept=".json" class="hidden">
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ================================================================
+        //  FIREBASE — INICIALIZAÇÃO
+        // ================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcyDYblHCrjPiy2yfKJqxO-EwSqAuxvEo",
+            authDomain: "copia-texto.firebaseapp.com",
+            databaseURL: "https://copia-texto-default-rtdb.firebaseio.com",
+            projectId: "copia-texto",
+            storageBucket: "copia-texto.firebasestorage.app",
+            messagingSenderId: "630884349136",
+            appId: "1:630884349136:web:de7af827ccc774ce8d9ad5",
+            measurementId: "G-MG7E9VWLB5"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const storage = firebase.storage();
+
+        // ID único do usuário (persiste no dispositivo)
+        let userId = localStorage.getItem('fb_uid');
+        if (!userId) {
+            userId = 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('fb_uid', userId);
+        }
+
+        // Referências do banco
+        const userRef = db.ref('users/' + userId);
+        const pastasRef = userRef.child('pastas');
+        const conteudosRef = userRef.child('conteudos');
+
+        // ================================================================
+        //  CACHE LOCAL (espelho do Firebase)
+        // ================================================================
+        let _conteudos = [];
+        let _pastas = [];
+
+        // ================================================================
+        //  ELEMENTOS
+        // ================================================================
+        const $ = id => document.getElementById(id);
+        const textoEntrada = $('textoEntrada');
+        const listaSalvos = $('listaSalvos');
+        const contadorItens = $('contadorItens');
+        const buscaInput = $('busca');
+        const previewFoto = $('previewFoto');
+        const imagemPreview = $('imagemPreview');
+        const toggleTema = $('toggleTema');
+        const listaPastasEl = $('listaPastas');
+        const pastaSelecionadaEl = $('pastaSelecionada');
+        const btnOpcoes = $('btnOpcoes');
+        const modalOpcoes = $('modalOpcoes');
+        const modalMover = $('modalMover');
+        const listaMoverPastas = $('listaMoverPastas');
+        const inputRestaurar = $('inputRestaurar');
+        const syncDot = $('syncDot');
+        const syncText = $('syncText');
+
+        let fotoAtual = null;
+        let pastaAtual = 'todas';
+        let itemIdEditando = null;
+        let moverItemId = null;
+
+        // ================================================================
+        //  UTILITÁRIOS
+        // ================================================================
+        function escaparHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function debounce(fn, delay) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        function dataURLtoBlob(dataURL) {
+            const parts = dataURL.split(',');
+            const mime = parts[0].match(/:(.*?);/)[1];
+            const b64 = atob(parts[1]);
+            const arr = new Uint8Array(b64.length);
+            for (let i = 0; i < b64.length; i++) arr[i] = b64.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+        }
+
+        function comprimirImagem(dataURL, maxLargura, qualidade) {
+            maxLargura = maxLargura || 1200;
+            qualidade = qualidade || 0.75;
+            return new Promise(function(resolve) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement('canvas');
+                    var w = img.width, h = img.height;
+                    if (w > maxLargura) { h = Math.round(h * maxLargura / w); w = maxLargura; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', qualidade));
+                };
+                img.onerror = function() { resolve(dataURL); };
+                img.src = dataURL;
+            });
+        }
+
+        // ================================================================
+        //  ESTADO DE CONEXÃO
+        // ================================================================
+        function atualizarStatusConexao(conectado) {
+            if (conectado) {
+                syncDot.className = 'sync-dot online';
+                syncText.textContent = 'Conectado';
+            } else {
+                syncDot.className = 'sync-dot offline';
+                syncText.textContent = 'Offline';
+            }
+        }
+
+        function mostrarSyncing() {
+            syncDot.className = 'sync-dot syncing';
+            syncText.textContent = 'Sincronizando...';
+        }
+
+        db.ref('.info/connected').on('value', function(snap) {
+            atualizarStatusConexao(snap.val() === true);
+        });
+
+        // ================================================================
+        //  TEMA
+        // ================================================================
+        toggleTema.addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('tema', document.documentElement.classList.contains('dark') ? 'escuro' : 'claro');
+        });
+
+        function aplicarTemaSalvo() {
+            var temaSalvo = localStorage.getItem('tema');
+            var prefereEscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (temaSalvo === 'escuro' || (!temaSalvo && prefereEscuro)) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        // ================================================================
+        //  SISTEMA DE PASTAS (Firebase)
+        // ================================================================
+        function inicializarPastas() {
+            // Verificar se já tem pastas no Firebase
+            pastasRef.once('value', function(snap) {
+                if (!snap.exists()) {
+                    // Criar pasta padrão
+                    pastasRef.child('geral').set({ id: 'geral', nome: 'Geral' });
+                }
+            });
+        }
+
+        function atualizarListaPastas() {
+            var fragBtns = document.createDocumentFragment();
+            var fragOpts = document.createDocumentFragment();
+
+            _pastas.forEach(function(pasta) {
+                var btn = document.createElement('button');
+                btn.className = 'btn btn-secondary text-sm whitespace-nowrap pasta-item';
+                btn.dataset.pasta = pasta.id;
+                btn.innerHTML = '<i class="fa fa-folder"></i> ' + escaparHTML(pasta.nome);
+                if (pasta.id === pastaAtual) btn.classList.add('pasta-ativa');
+                btn.onclick = function() { selecionarPasta(pasta.id); };
+                fragBtns.appendChild(btn);
+
+                var opt = document.createElement('option');
+                opt.value = pasta.id;
+                opt.textContent = pasta.nome;
+                fragOpts.appendChild(opt);
+            });
+
+            listaPastasEl.innerHTML = '';
+            listaPastasEl.appendChild(fragBtns);
+            pastaSelecionadaEl.innerHTML = '';
+            pastaSelecionadaEl.appendChild(fragOpts);
+        }
+
+        window.selecionarPasta = function(id) {
+            pastaAtual = id;
+            document.querySelectorAll('.pasta-item').forEach(function(el) { el.classList.remove('pasta-ativa'); });
+            var ativo = document.querySelector('[data-pasta="' + id + '"]');
+            if (ativo) ativo.classList.add('pasta-ativa');
+            carregarConteudosSalvos();
+        };
+
+        window.criarNovaPasta = function() {
+            var nome = prompt('Digite o nome da pasta:');
+            if (!nome || !nome.trim()) return;
+            var id = 'pasta_' + Date.now();
+            pastasRef.child(id).set({ id: id, nome: nome.trim() });
+            mostrarAviso('Pasta criada com sucesso!', 'sucesso');
+        };
+
+        // ================================================================
+        //  BUSCA COM DEBOUNCE
+        // ================================================================
+        var buscaDebounced = debounce(function(valor) {
+            carregarConteudosSalvos(valor);
+        }, 200);
+
+        buscaInput.addEventListener('input', function() {
+            buscaDebounced(buscaInput.value.trim().toLowerCase());
+        });
+
+        // ================================================================
+        //  FUNÇÕES DE TEXTO
+        // ================================================================
+        window.copiarTexto = async function() {
+            var txt = textoEntrada.value.trim();
+            if (!txt) return mostrarAviso('Digite algo primeiro!', 'erro');
+            try {
+                await navigator.clipboard.writeText(txt);
+                mostrarAviso('Texto copiado!', 'sucesso');
+            } catch {
+                mostrarAviso('Não foi possível copiar', 'erro');
+            }
+        };
+
+        window.colarTexto = async function() {
+            try {
+                textoEntrada.value = await navigator.clipboard.readText();
+                mostrarAviso('Texto colado!', 'sucesso');
+            } catch {
+                mostrarAviso('Não foi possível colar', 'erro');
+            }
+        };
+
+        window.salvarTexto = function() {
+            var txt = textoEntrada.value.trim();
+            if (!txt) return mostrarAviso('Escreva algo para salvar!', 'erro');
+
+            mostrarSyncing();
+
+            if (itemIdEditando) {
+                // Edição in-place
+                conteudosRef.child(String(itemIdEditando)).update({
+                    dados: txt,
+                    data: new Date().toLocaleString('pt-BR'),
+                    pasta: pastaSelecionadaEl.value
+                });
+                itemIdEditando = null;
+            } else {
+                var id = String(Date.now());
+                conteudosRef.child(id).set({
+                    id: id,
+                    tipo: 'texto',
+                    dados: txt,
+                    pasta: pastaSelecionadaEl.value,
+                    data: new Date().toLocaleString('pt-BR')
+                });
+            }
+
+            textoEntrada.value = '';
+            mostrarAviso('Salvo na nuvem!', 'sucesso');
+        };
+
+        window.compartilharConteudo = async function() {
+            var txt = textoEntrada.value.trim();
+            if (!txt) return mostrarAviso('Escreva algo primeiro!', 'erro');
+            try {
+                await navigator.share({ text: txt });
+            } catch {
+                try {
+                    await navigator.clipboard.writeText(txt);
+                    mostrarAviso('Copiado para compartilhar', 'info');
+                } catch {
+                    mostrarAviso('Não foi possível compartilhar', 'erro');
+                }
+            }
+        };
+
+        // ================================================================
+        //  FUNÇÕES DE IMAGEM (Firebase Storage)
+        // ================================================================
+        window.processarFoto = async function() {
+            var arq = $('fotoEntrada').files[0];
+            if (!arq) return;
+            var leitor = new FileReader();
+            leitor.onload = async function(e) {
+                fotoAtual = await comprimirImagem(e.target.result);
+                imagemPreview.src = fotoAtual;
+                previewFoto.classList.remove('hidden');
+            };
+            leitor.readAsDataURL(arq);
+        };
+
+        window.salvarFoto = async function() {
+            if (!fotoAtual) return;
+
+            mostrarSyncing();
+            mostrarAviso('Enviando imagem...', 'info');
+
+            try {
+                // Converter dataURL para Blob
+                var blob = dataURLtoBlob(fotoAtual);
+                var nomeArquivo = 'imagens/' + Date.now() + '.jpg';
+                var storageRef = storage.ref('users/' + userId + '/' + nomeArquivo);
+
+                // Upload para o Storage
+                var snapshot = await storageRef.put(blob);
+                var downloadURL = await snapshot.ref.getDownloadURL();
+
+                // Salvar metadados no Realtime Database
+                var id = String(Date.now());
+                await conteudosRef.child(id).set({
+                    id: id,
+                    tipo: 'foto',
+                    dados: downloadURL,  // URL do Storage em vez de base64
+                    pasta: pastaSelecionadaEl.value,
+                    data: new Date().toLocaleString('pt-BR'),
+                    storagePath: nomeArquivo
+                });
+
+                fotoAtual = null;
+                previewFoto.classList.add('hidden');
+                $('fotoEntrada').value = '';
+                mostrarAviso('Imagem salva na nuvem!', 'sucesso');
+            } catch (err) {
+                console.error('Erro ao salvar imagem:', err);
+                mostrarAviso('Erro ao salvar imagem', 'erro');
+            }
+        };
+
+        window.compartilharFoto = async function() {
+            if (!fotoAtual) return;
+            try {
+                var blob = dataURLtoBlob(fotoAtual);
+                var arq = new File([blob], 'imagem_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+                    await navigator.share({ files: [arq] });
+                } else {
+                    mostrarAviso('Compartilhamento não suportado neste navegador', 'info');
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    mostrarAviso('Compartilhamento não suportado', 'info');
+                }
+            }
+        };
+
+        // ================================================================
+        //  RENDERIZAÇÃO DA LISTA
+        // ================================================================
+        function carregarConteudosSalvos(filtro) {
+            filtro = filtro || '';
+            var lista = _conteudos.slice();
+
+            if (pastaAtual !== 'todas') {
+                lista = lista.filter(function(i) { return i.pasta === pastaAtual; });
+            }
+            if (filtro) {
+                lista = lista.filter(function(i) {
+                    return i.tipo === 'texto' && i.dados.toLowerCase().includes(filtro);
+                });
+            }
+
+            contadorItens.textContent = lista.length;
+
+            if (!lista.length) {
+                listaSalvos.innerHTML = filtro
+                    ? '<div class="text-center py-8 text-neutral-500"><p>Nenhum resultado encontrado</p></div>'
+                    : '<div class="text-center py-10 text-neutral-500"><i class="fa fa-inbox text-4xl mb-3 opacity-30"></i><p>Nenhum conteúdo salvo ainda</p></div>';
+                return;
+            }
+
+            var mapaPastas = {};
+            _pastas.forEach(function(p) { mapaPastas[p.id] = p.nome; });
+
+            var html = '';
+            for (var i = 0; i < lista.length; i++) {
+                var item = lista[i];
+                var nomePasta = mapaPastas[item.pasta] || 'Geral';
+                var ehTexto = item.tipo === 'texto';
+                var atraso = Math.min(i * 0.04, 0.4);
+
+                html += '<div class="card p-4 fade-in item-card" style="animation-delay:' + atraso + 's">';
+
+                if (ehTexto) {
+                    html += '<p class="whitespace-pre-wrap break-words text-sm leading-relaxed">' + escaparHTML(item.dados) + '</p>';
+                } else {
+                    html += '<img src="' + escaparHTML(item.dados) + '" class="w-full max-h-60 object-contain rounded-lg" loading="lazy" onerror="this.src=\'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22100%22><rect fill=%22%23f2f3f5%22 width=%22200%22 height=%22100%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%2386909c%22 font-size=%2214%22>Imagem indisponível</text></svg>\'">';
+                }
+
+                html += '<div class="mt-3 pt-2 border-t border-neutral-200 dark:border-neutral-700 flex flex-wrap justify-between items-center gap-2">';
+                html += '<span class="text-xs text-neutral-500">' + escaparHTML(item.data) + ' &bull; ' + escaparHTML(nomePasta) + '</span>';
+                html += '<div class="flex gap-1.5">';
+
+                if (ehTexto) {
+                    html += '<button onclick="editarItem(\'' + item.id + '\')" class="text-xs px-2.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors" title="Editar"><i class="fa fa-pencil"></i></button>';
+                }
+                html += '<button onclick="moverItem(\'' + item.id + '\')" class="text-xs px-2.5 py-1.5 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-colors" title="Mover"><i class="fa fa-folder"></i></button>';
+                html += '<button onclick="copiarItem(\'' + item.id + '\')" class="text-xs px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-700 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors" title="Copiar"><i class="fa fa-copy"></i></button>';
+                html += '<button onclick="apagarItem(\'' + item.id + '\', this)" class="text-xs px-2.5 py-1.5 bg-red-50 dark:bg-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors" title="Excluir"><i class="fa fa-trash"></i></button>';
+
+                html += '</div></div></div>';
+            }
+
+            listaSalvos.innerHTML = html;
+        }
+
+        // ================================================================
+        //  AÇÕES DOS ITENS
+        // ================================================================
+        function encontrarItem(id) {
+            return _conteudos.find(function(i) { return String(i.id) === String(id); }) || null;
+        }
+
+        window.copiarItem = async function(id) {
+            var item = encontrarItem(id);
+            if (!item) return;
+            if (item.tipo === 'texto') {
+                try {
+                    await navigator.clipboard.writeText(item.dados);
+                    mostrarAviso('Copiado!', 'sucesso');
+                } catch {
+                    mostrarAviso('Não foi possível copiar', 'erro');
+                }
+            } else {
+                mostrarAviso('Imagem — compartilhe diretamente', 'info');
+            }
+        };
+
+        window.editarItem = function(id) {
+            var item = encontrarItem(id);
+            if (!item || item.tipo !== 'texto') return;
+            itemIdEditando = id;
+            textoEntrada.value = item.dados;
+            textoEntrada.focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            mostrarAviso('Edite e salve para atualizar', 'info');
+        };
+
+        window.moverItem = function(id) {
+            var item = encontrarItem(id);
+            if (!item) return;
+            moverItemId = id;
+            var html = '';
+            _pastas.forEach(function(p) {
+                var ativo = p.id === item.pasta ? 'ring-2 ring-primary' : '';
+                html += '<button onclick="confirmarMover(\'' + p.id + '\')" class="w-full flex items-center gap-3 p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-600 transition-colors ' + ativo + '">';
+                html += '<i class="fa fa-folder text-primary w-5 text-center"></i>';
+                html += '<span class="font-medium">' + escaparHTML(p.nome) + '</span>';
+                html += '</button>';
+            });
+            listaMoverPastas.innerHTML = html;
+            modalMover.classList.remove('hidden');
+        };
+
+        window.confirmarMover = function(pastaId) {
+            if (!moverItemId) return;
+            mostrarSyncing();
+            conteudosRef.child(String(moverItemId)).child('pasta').set(pastaId);
+            fecharModalMover();
+            mostrarAviso('Movido com sucesso!', 'sucesso');
+        };
+
+        function fecharModalMover() {
+            modalMover.classList.add('hidden');
+            moverItemId = null;
+        }
+        window.fecharModalMover = fecharModalMover;
+
+        window.apagarItem = function(id, btnEl) {
+            var card = btnEl ? btnEl.closest('.item-card') : null;
+            if (card) {
+                card.classList.add('removing');
+                setTimeout(function() {
+                    executarExclusao(id);
+                }, 280);
+            } else {
+                if (!confirm('Excluir definitivamente?')) return;
+                executarExclusao(id);
+            }
+        };
+
+        function executarExclusao(id) {
+            var item = encontrarItem(id);
+            mostrarSyncing();
+
+            // Se for imagem, também apagar do Storage
+            if (item && item.tipo === 'foto' && item.storagePath) {
+                try {
+                    storage.ref('users/' + userId + '/' + item.storagePath).delete();
+                } catch (e) {
+                    // Ignora erro se o arquivo não existir
+                }
+            }
+
+            conteudosRef.child(String(id)).remove();
+            mostrarAviso('Excluído!', 'sucesso');
+        }
+
+        // ================================================================
+        //  MODAL DE OPÇÕES
+        // ================================================================
+        btnOpcoes.addEventListener('click', function() {
+            modalOpcoes.classList.remove('hidden');
+        });
+
+        window.fecharModalOpcoes = function() {
+            modalOpcoes.classList.add('hidden');
+        };
+
+        window.exportarTexto = function() {
+            if (!_conteudos.length) {
+                mostrarAviso('Nenhum dado para exportar', 'erro');
+                return;
+            }
+            var texto = '=== Copia & Salva Pro ===\nData: ' + new Date().toLocaleString('pt-BR') + '\n\n';
+            _conteudos.forEach(function(item) {
+                texto += item.data + '\n';
+                texto += item.tipo === 'texto' ? item.dados : '[Arquivo de imagem]';
+                texto += '\n----------------------------------------\n';
+            });
+            baixarArquivo(texto, 'dados_exportados.txt', 'text/plain');
+            fecharModalOpcoes();
+            mostrarAviso('Exportado com sucesso!', 'sucesso');
+        };
+
+        window.criarBackup = function() {
+            var dados = {
+                data: new Date().toLocaleString('pt-BR'),
+                userId: userId,
+                pastas: _pastas,
+                conteudos: _conteudos
+            };
+            baixarArquivo(JSON.stringify(dados, null, 2), 'copia_seguranca.json', 'application/json');
+            fecharModalOpcoes();
+            mostrarAviso('Cópia criada com sucesso!', 'sucesso');
+        };
+
+        window.restaurarBackup = function() {
+            fecharModalOpcoes();
+            inputRestaurar.click();
+        };
+
+        inputRestaurar.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var leitor = new FileReader();
+            leitor.onload = function(res) {
+                try {
+                    var dados = JSON.parse(res.target.result);
+                    if (!dados.conteudos || !Array.isArray(dados.conteudos)) {
+                        throw new Error('formato invalido');
+                    }
+
+                    mostrarSyncing();
+
+                    if (confirm('Quer adicionar esses dados aos existentes?\n\nOK = Adicionar\nCancelar = Substituir tudo')) {
+                        // Adicionar mantendo os atuais
+                        var updates = {};
+                        dados.conteudos.forEach(function(item) {
+                            var novoId = String(Date.now() + Math.floor(Math.random() * 1000));
+                            updates[novoId] = Object.assign({}, item, { id: novoId });
+                        });
+                        conteudosRef.update(updates);
+
+                        if (dados.pastas && Array.isArray(dados.pastas)) {
+                            var pastaUpdates = {};
+                            dados.pastas.forEach(function(p) {
+                                pastaUpdates[p.id] = p;
+                            });
+                            pastasRef.update(pastaUpdates);
+                        }
+                    } else {
+                        // Substituir tudo
+                        conteudosRef.remove();
+                        pastasRef.remove();
+                        setTimeout(function() {
+                            var updates = {};
+                            dados.conteudos.forEach(function(item) {
+                                updates[item.id] = item;
+                            });
+                            conteudosRef.update(updates);
+                            if (dados.pastas) {
+                                var pastaUpdates = {};
+                                dados.pastas.forEach(function(p) {
+                                    pastaUpdates[p.id] = p;
+                                });
+                                pastasRef.update(pastaUpdates);
+                            }
+                        }, 500);
+                    }
+
+                    mostrarAviso('Dados restaurados com sucesso!', 'sucesso');
+                } catch {
+                    mostrarAviso('Arquivo invalido ou corrompido!', 'erro');
+                }
+            };
+            leitor.readAsText(file);
+            this.value = '';
+        });
+
+        window.apagarTudo = function() {
+            if (confirm('TEM CERTEZA? Isso apaga TUDO de uma vez e nao tem volta!')) {
+                if (confirm('Ultima chance! Realmente deseja apagar todos os dados?')) {
+                    mostrarSyncing();
+                    // Apagar do Realtime Database
+                    userRef.remove();
+                    // Apagar imagens do Storage
+                    storage.ref('users/' + userId).listAll().then(function(result) {
+                        var promises = [];
+                        result.prefixes.forEach(function(folderRef) {
+                            promises.push(folderRef.delete());
+                        });
+                        result.items.forEach(function(fileRef) {
+                            promises.push(fileRef.delete());
+                        });
+                        return Promise.all(promises);
+                    }).catch(function() {
+                        // Ignora erros de Storage na limpeza
+                    });
+
+                    // Recriar pasta padrão após limpeza
+                    setTimeout(function() {
+                        inicializarPastas();
+                        mostrarAviso('Todos os dados foram removidos.', 'sucesso');
+                    }, 1000);
+
+                    fecharModalOpcoes();
+                }
+            }
+        };
+
+        function baixarArquivo(conteudo, nome, tipo) {
+            var blob = new Blob([conteudo], { type: tipo });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = nome;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ================================================================
+        //  SISTEMA DE AVISOS
+        // ================================================================
+        var avisoTimer = null;
+        function mostrarAviso(mensagem, tipo) {
+            var aviso = $('notificacao');
+            var icone = $('iconeNotif');
+            var texto = $('textoNotificacao');
+            var icones = {
+                sucesso: 'fa-check-circle text-green-400',
+                erro: 'fa-exclamation-circle text-red-400',
+                info: 'fa-info-circle text-blue-400'
+            };
+            icone.className = 'fa ' + (icones[tipo] || icones.info);
+            texto.textContent = mensagem;
+
+            if (avisoTimer) clearTimeout(avisoTimer);
+            aviso.style.opacity = '1';
+            aviso.style.transform = 'translate3d(-50%, 0, 0)';
+
+            avisoTimer = setTimeout(function() {
+                aviso.style.opacity = '0';
+                aviso.style.transform = 'translate3d(-50%, 8px, 0)';
+                // Restaurar status da conexão após ocultar o aviso
+                var conectado = syncDot.classList.contains('online');
+                if (conectado) {
+                    syncText.textContent = 'Conectado';
+                }
+            }, 2500);
+        }
+
+        // ================================================================
+        //  LISTENERS DO FIREBASE (SYNC EM TEMPO REAL)
+        // ================================================================
+        function escutarDados() {
+            // Escutar mudanças nas pastas
+            pastasRef.on('value', function(snap) {
+                var data = snap.val();
+                _pastas = data ? Object.values(data) : [];
+                atualizarListaPastas();
+            });
+
+            // Escutar mudanças nos conteúdos
+            conteudosRef.on('value', function(snap) {
+                var data = snap.val();
+                if (data) {
+                    _conteudos = Object.values(data).sort(function(a, b) {
+                        // Ordenar por ID (timestamp) decrescente = mais novos primeiro
+                        return String(b.id).localeCompare(String(a.id));
+                    });
+                } else {
+                    _conteudos = [];
+                }
+                carregarConteudosSalvos(buscaInput.value.trim().toLowerCase());
+            });
+        }
+
+        // ================================================================
+        //  INICIALIZAÇÃO
+        // ================================================================
+        window.addEventListener('DOMContentLoaded', function() {
+            aplicarTemaSalvo();
+            inicializarPastas();
+            escutarDados();
+        });
+
+    })();
+    </script>
+</body>
+</html>
