@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Copia & Salva Pro</title>
+    <meta name="theme-color" content="#165DFF">
+    
+    <!-- AdMob -->
+    <meta name="google-adsense-account" content="ca-app-pub-7137037324260862~9760622320">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-app-pub-7137037324260862~9760622320" crossorigin="anonymous"></script>
+
+    <!-- Firebase completo: App + Análise + Banco + Arquivos -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF', secondary: '#36BFFA', accent: '#FF7D00',
+                        success: '#00B42A', danger: '#F53F3F',
+                        neutral:{50:'#F7F8FA',100:'#F2F3F5',200:'#E5E6EB',300:'#C9CDD4',400:'#86909C',500:'#4E5969',600:'#2E3440',700:'#1E222C',800:'#141414',900:'#0A0A0A'}
+                    },
+                    fontFamily:{sans:['Inter','Segoe UI','sans-serif']}
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities{
+            .content-auto{content-visibility:auto;}
+            .card{@apply bg-white dark:bg-neutral-800 rounded-2xl shadow-sm hover:shadow-md transition-shadow border border-neutral-100 dark:border-neutral-700;}
+            .btn{@apply px-3 py-2 rounded-xl font-medium transition-all flex items-center justify-center gap-1.5 active:scale-95;}
+            .btn-secondary{@apply bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-700 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200;}
+            .btn-success{@apply bg-success hover:bg-success/90 text-white;}
+            .btn-accent{@apply bg-accent hover:bg-accent/90 text-white;}
+            .btn-primary{@apply bg-primary hover:bg-primary/90 text-white;}
+            .input-field{@apply w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-xl bg-neutral-50 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary dark:text-white;}
+            .fade-in{animation:fadeIn .3s ease-out;}
+            @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+            .ads-container{@apply my-4 p-1 rounded-xl overflow-hidden;}
+        }
+    </style>
+</head>
+<body class="bg-neutral-50 dark:bg-neutral-900 min-h-screen font-sans text-neutral-800 dark:text-neutral-100">
+    <!-- Cabeçalho -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-md border-b border-neutral-100 dark:border-neutral-700">
+        <div class="container mx-auto px-4 py-3.5 flex justify-between items-center">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <i class="fa fa-copy text-white"></i>
+                </div>
+                <h1 class="text-lg font-bold">Copia & Salva Pro</h1>
+            </div>
+            <div class="flex gap-2">
+                <span id="statusNuvem" class="text-xs px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hidden">
+                    <i class="fa fa-cloud"></i> Nuvem
+                </span>
+                <button id="btnSincronizar" class="btn btn-secondary text-xs py-1.5 px-2" title="Sincronizar com nuvem">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button id="toggleTema" class="w-9 h-9 rounded-xl bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center">
+                    <i class="fa fa-moon-o dark:hidden"></i>
+                    <i class="fa fa-sun-o hidden dark:block text-yellow-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Inicialização Firebase — SEUS DADOS EXATOS -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKM5lZ4ORTEDVdyNfsvbtEFORSiW7W2pI",
+            authDomain: "copia-daa41.firebaseapp.com",
+            projectId: "copia-daa41",
+            storageBucket: "copia-daa41.firebasestorage.app",
+            messagingSenderId: "20201129896",
+            appId: "1:20201129896:web:01a47e105d7892c372ff9d",
+            measurementId: "G-VV0PH82QYK"
+        };
+        const app = firebase.initializeApp(firebaseConfig);
+        const analytics = firebase.getAnalytics(app);
+        const db = firebase.database();
+        const storage = firebase.getStorage(app);
+        const refDados = db.ref('/conteudos');
+        const refArquivos = firebase.ref(storage, '/imagens');
+    </script>
+
+    <main class="container mx-auto px-4 py-4 pb-24">
+        <!-- Área de Entrada -->
+        <section class="card p-4.5 mb-5 fade-in">
+            <h2 class="text-base font-semibold mb-2.5 flex items-center gap-2">
+                <i class="fa fa-edit text-primary"></i> Novo Conteúdo
+            </h2>
+            <textarea id="textoEntrada" placeholder="Texto, links, códigos ou anotações..." class="input-field h-32 resize-none"></textarea>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                <button onclick="copiarTexto()" class="btn btn-secondary"><i class="fa fa-copy"></i>Copiar</button>
+                <button onclick="colarTexto()" class="btn btn-secondary"><i class="fa fa-paste"></i>Colar</button>
+                <button onclick="salvarTexto()" class="btn btn-success"><i class="fa fa-save"></i>Salvar</button>
+                <button onclick="compartilharConteudo()" class="btn btn-accent"><i class="fa fa-share-alt"></i>Compartilhar</button>
+            </div>
+        </section>
+
+        <!-- Anúncio 1 -->
+        <div class="ads-container">
+            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-app-pub-7137037324260862" data-ad-slot="1869689863" data-ad-format="auto" data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+        </div>
+
+        <!-- Área de Imagens -->
+        <section class="card p-4.5 mb-5 fade-in">
+            <h2 class="text-base font-semibold mb-2.5 flex items-center gap-2">
+                <i class="fa fa-image text-primary"></i> Adicionar Imagem
+            </h2>
+            <input type="file" id="fotoEntrada" accept="image/*" class="hidden" onchange="processarFoto()">
+            <label for="fotoEntrada" class="block border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-xl p-6 text-center cursor-pointer hover:border-primary">
+                <i class="fa fa-camera text-3xl text-neutral-400 mb-2"></i>
+                <p class="font-medium">Toque para escolher arquivo</p>
+            </label>
+            <div id="previewFoto" class="mt-4 hidden">
+                <img id="imagemPreview" src="" class="w-full max-h-56 object-contain rounded-xl border">
+                <div class="flex gap-2 mt-3">
+                    <button onclick="salvarFoto()" class="btn btn-success flex-1"><i class="fa fa-cloud-upload"></i>Salvar na Nuvem</button>
+                    <button onclick="compartilharFoto()" class="btn btn-accent flex-1"><i class="fa fa-share-alt"></i>Compartilhar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Anúncio 2 -->
+        <div class="ads-container">
+            <ins class="adsbygoogle" style="display:block" data-ad-client="ca-app-pub-7137037324260862" data-ad-slot="1869689863" data-ad-format="auto" data-full-width-responsive="true"></ins>
+            <script>(adsbygoogle=window.adsbygoogle||[]).push({});</script>
+        </div>
+
+        <!-- Itens Salvos -->
+        <section class="card p-4.5 fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 mb-3.5">
+                <h2 class="text-base font-semibold flex items-center gap-2">
+                    <i class="fa fa-folder-open text-primary"></i> Meus Conteúdos
+                    <span id="contadorItens" class="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-medium">0</span>
+                </h2>
+                <input type="text" id="busca" placeholder="Buscar..." class="input-field text-sm py-1.5 w-full sm:w-44">
+            </div>
+            <div id="listaSalvos" class="space-y-3 min-h-[100px]">
+                <div class="text-center py-8 text-neutral-500">
+                    <i class="fa fa-inbox text-3xl mb-2 opacity-25"></i>
+                    <p>Nenhum conteúdo salvo ainda</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Avisos -->
+    <div id="notificacao" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <div class="bg-neutral-900/90 dark:bg-neutral-700/90 backdrop-blur-sm text-white px-5 py-2.5 rounded-xl shadow-xl flex items-center gap-2">
+            <i id="iconeNotif" class="fa fa-check-circle text-green-400"></i>
+            <span id="textoNotificacao" class="text-sm"></span>
+        </div>
+    </div>
+
+    <script>
+        const textoEntrada = document.getElementById('textoEntrada');
+        const listaSalvos = document.getElementById('listaSalvos');
+        const contadorItens = document.getElementById('contadorItens');
+        const buscaInput = document.getElementById('busca');
+        const previewFoto = document.getElementById('previewFoto');
+        const imagemPreview = document.getElementById('imagemPreview');
+        const toggleTema = document.getElementById('toggleTema');
+        const statusNuvem = document.getElementById('statusNuvem');
+        const btnSincronizar = document.getElementById('btnSincronizar');
+        let fotoAtual = null;
+        let listaGeral = [];
+
+        // Inicialização
+        window.addEventListener('load', () => {
+            aplicarTemaSalvo();
+            carregarLocal();
+            ouvirNuvem();
+        });
+        btnSincronizar.addEventListener('click', ()=>{ouvirNuvem(); mostrarNotificacao('Sincronizando...','info');});
+
+        // Tema
+        toggleTema.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('tema', document.documentElement.classList.contains('dark') ? 'escuro' : 'claro');
+        });
+        function aplicarTemaSalvo(){
+            if(localStorage.getItem('tema')==='escuro'||(!localStorage.getItem('tema')&&window.matchMedia('(prefers-color-scheme: dark)').matches))
+                document.documentElement.classList.add('dark');
+        }
+
+        // Busca
+        buscaInput.addEventListener('input', ()=>filtrarLista(buscaInput.value.trim().toLowerCase()));
+
+        // --- Funções Básicas ---
+        async function copiarTexto(){
+            if(!textoEntrada.value.trim()) return mostrarNotificacao('Digite algo primeiro!','erro');
+            await navigator.clipboard.writeText(textoEntrada.value);
+            mostrarNotificacao('Texto copiado!','sucesso');
+        }
+        async function colarTexto(){textoEntrada.value=await navigator.clipboard.readText(); mostrarNotificacao('Texto colado!','sucesso');}
+        async function compartilharConteudo(){
+            if(!textoEntrada.value.trim()) return mostrarNotificacao('Digite algo primeiro!','erro');
+            try{await navigator.share({text:textoEntrada.value});}
+            catch{e=>{await navigator.clipboard.writeText(textoEntrada.value); mostrarNotificacao('Copiado para área de transferência','info');}}
+        }
+
+        // --- Salvar: Local + Nuvem ---
+        function salvarTexto(){
+            const texto=textoEntrada.value.trim();
+            if(!texto) return mostrarNotificacao('Digite algo para salvar!','erro');
+            const item={id:Date.now(),tipo:'texto',dados:texto,data:new Date().toLocaleString('pt-BR')};
+            salvarLocal(item); salvarNuvem(item);
+            textoEntrada.value=''; mostrarNotificacao('Salvo local e na nuvem!','sucesso');
+        }
+
+        // --- Imagens ---
+        function processarFoto(){
+            const arq=document.getElementById('fotoEntrada').files[0];
+            if(!arq) return;
+            const leitor=new FileReader();
+            leitor.onload=e=>{fotoAtual=e.target.result; imagemPreview.src=fotoAtual; previewFoto.classList.remove('hidden');};
+            leitor.readAsDataURL(arq);
+        }
+        async function salvarFoto(){
+            if(!fotoAtual) return mostrarNotificacao('Escolha uma imagem primeiro!','erro');
+            mostrarNotificacao('Enviando para nuvem...','info');
+            const idArq=Date.now();
+            const blob=await fetch(fotoAtual).then(r=>r.blob());
+            const caminho=`imagens/${idArq}.jpg`;
+            const arqRef=firebase.ref(storage,caminho);
+            await firebase.uploadBytes(arqRef,blob);
+            const url=await firebase.getDownloadURL(arqRef);
+            const item={id:idArq,tipo:'foto',dados:url,data:new Date().toLocaleString('pt-BR')};
+            salvarLocal(item); salvarNuvem(item);
+            fotoAtual=null; previewFoto.classList.add('hidden'); document.getElementById('fotoEntrada').value='';
+            mostrarNotificacao('Imagem salva na nuvem!','sucesso');
+        }
+        async function compartilharFoto(){
+            if(!fotoAtual) return mostrarNotificacao('Escolha uma imagem primeiro!','erro');
+            const blob=await fetch(fotoAtual).then(r=>r.blob());
+            const arq=new File([blob],`imagem_${Date.now()}.jpg`,{type:'image/jpeg'});
+            try{if(navigator.canShare({files:[arq]})) await navigator.share({files:[arq]});}
+            catch{e=>mostrarNotificacao('Compartilhamento indisponível','info');}
+        }
+
+        // --- Armazenamento Local ---
+        function salvarLocal(item){const dados=JSON.parse(localStorage.getItem('conteudosSalvos'))||[]; dados.unshift(item); localStorage.setItem('conteudosSalvos',JSON.stringify(dados));}
+        function carregarLocal(){listaGeral=JSON.parse(localStorage.getItem('conteudosSalvos'))||[]; atualizarTela();}
+
+        // --- Sincronização Nuvem ---
+        function salvarNuvem(item){refDados.child(item.id).set(item).catch(e=>console.warn('Nuvem indisponível:',e));}
+        function apagarNuvem(id){refDados.child(id).remove().catch(e=>console.warn('Erro ao apagar na nuvem:',e));}
+        function ouvirNuvem(){
+            refDados.on('value',snap=>{
+                statusNuvem.classList.remove('hidden');
+                const dados=snap.val()||{};
+                const listaNuvem=Object.values(dados);
+                localStorage.setItem('conteudosSalvos',JSON.stringify(listaNuvem));
+                listaGeral=listaNuvem; atualizarTela();
+                setTimeout(()=>statusNuvem.classList.add('hidden'),4000);
+            },erro=>{
+                console.warn('Sem conexão Firebase:',erro);
+                statusNuvem.textContent='🔴 Offline'; statusNuvem.classList.remove('hidden');
+                statusNuvem.className='text-xs px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
+            });
+        }
+
+        // --- Exibição ---
+        function atualizarTela(){filtrarLista(buscaInput.value.trim().toLowerCase());}
+        function filtrarLista(termo=''){
+            const listaFiltrada=termo?listaGeral.filter(i=>i.dados.toLowerCase().includes(termo)):listaGeral;
+            contadorItens.textContent=listaFiltrada.length;
+            listaSalvos.innerHTML=listaFiltrada.length?'':`<div class="text-center py-8 text-neutral-500"><i class="fa fa-inbox text-3xl mb-2 opacity-25"></i><p>Nenhum resultado encontrado</p></div>`;
+            listaFiltrada.forEach(i=>listaSalvos.appendChild(criarItem(i)));
+        }
+        function criarItem(item){
+            const el=document.createElement('div'); el.className='card p-3.5 fade-in';
+            el.innerHTML=`
+                ${item.tipo==='texto'?`<p class="whitespace-pre-wrap break-words text-sm">${item.dados}</p>`:`<img src="${item.dados}" class="w-full max-h-52 object-contain rounded-lg">`}
+                <div class="mt-2.5 pt-2 border-t border-neutral-100 dark:border-neutral-700 flex flex-wrap justify-between items-center gap-1.5">
+                    <span class="text-[10px] text-neutral-500">${item.data}</span>
+                    <div class="flex gap-1.5">
+                        ${item.tipo==='texto'?`<button onclick="editarItem(${item.id})" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600"><i class="fa fa-pencil"></i>Editar</button>`:''}
+                        <button onclick="copiarItem(${item.id})" class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-700"><i class="fa fa-copy"></i>Copiar</button>
+                        <button onclick="apagarItem(${item.id})" class="text-[10px] px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600"><i class="fa fa-trash"></i>Apagar</button>
+                    </div>
+                </div>`;
+            return el;
+        }
+
+        // --- Ações nos itens ---
+        async function copiarItem(id){
+            const obj=listaGeral.find(i=>i.id===id);
+            if(obj.tipo==='texto') await navigator.clipboard.writeText(obj.dados);
+            mostrarNotificacao('Copiado!','sucesso');
+        }
+        function editarItem(id){
+            if(!confirm('Editar esse conteúdo?')) return;
+            const obj=listaGeral.find(i=>i.id===id);
+            textoEntrada.value=obj.dados;
+            apagarItem(id,false);
+            textoEntrada.focus();
+        }
+        function apagarItem(id,confirma=true){
+            if(confirma&&!confirm('Excluir definitivamente?')) return;
+            let dados=JSON.parse(localStorage.getItem('conteudosSalvos'))||[];
+            dados=dados.filter(i=>i.id!==id);
+            localStorage.setItem('conteudosSalvos',JSON.stringify(dados));
+            listaGeral=dados; atualizarTela(); apagarNuvem(id);
+            if(confirma) mostrarNotificacao('Excluído!','sucesso');
+        }
+
+        // --- Avisos ---
+        function mostrarNotificacao(texto,tipo='sucesso'){
+            const aviso=document.getElementById('notificacao');
+            document.getElementById('textoNotificacao').textContent=texto;
+            const icones={sucesso:'fa-check-circle text-green-400',erro:'fa-exclamation-circle text-red-400',info:'fa-info-circle text-blue-400'};
+            document.getElementById('iconeNotif').className=`fa ${icones[tipo]}`;
+            aviso.classList.remove('opacity-0');
+            setTimeout(()=>aviso.classList.add('opacity-0'),2800);
+        }
+    </script>
+</body>
+</html>
