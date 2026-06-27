@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Copia & Salva Pro</title>
+    <meta name="theme-color" content="#165DFF">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #165DFF;
+            --primary-rgb: 22,93,255;
+            --secondary: #36BFFA;
+            --secondary-rgb: 54,191,250;
+            --accent: #FF7D00;
+            --success: #00B42A;
+            --danger: #F53F3F;
+            --bg: #F5F7FA;
+            --bg2: #FFFFFF;
+            --bg3: #EEF1F6;
+            --text: #1A1D26;
+            --text2: #6B7280;
+            --text3: #9CA3AF;
+            --border: #E5E7EB;
+            --border2: #D1D5DB;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+            --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+            --header-bg: rgba(255,255,255,0.82);
+            --modal-bg: rgba(0,0,0,0.45);
+            --overlay-blur: blur(16px);
+        }
+        html.dark {
+            --bg: #0D1117;
+            --bg2: #161B22;
+            --bg3: #21262D;
+            --text: #E6EDF3;
+            --text2: #8B949E;
+            --text3: #484F58;
+            --border: #30363D;
+            --border2: #444C56;
+            --card-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.12);
+            --card-shadow-hover: 0 4px 16px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.15);
+            --header-bg: rgba(13,17,23,0.82);
+        }
+        html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            min-height: 100dvh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            transition: background-color 0.35s ease, color 0.35s ease;
+        }
+
+        /* === SCROLLBAR === */
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* === HEADER === */
+        .app-header {
+            position: sticky; top: 0; z-index: 40;
+            background: var(--header-bg);
+            backdrop-filter: var(--overlay-blur);
+            -webkit-backdrop-filter: var(--overlay-blur);
+            border-bottom: 1px solid var(--border);
+            transition: background-color 0.35s, border-color 0.35s;
+        }
+        .header-inner {
+            max-width: 640px; margin: 0 auto;
+            padding: 14px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .logo-group { display: flex; align-items: center; gap: 12px; }
+        .logo-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 17px;
+            box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.35);
+            transition: transform 0.2s;
+        }
+        .logo-icon:active { transform: scale(0.93); }
+        .logo-text { font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+        .header-actions { display: flex; gap: 8px; }
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 12px; border: none;
+            background: var(--bg3); color: var(--text2);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 15px;
+            transition: background-color 0.2s, color 0.2s, transform 0.15s;
+        }
+        .icon-btn:hover { background: var(--border); color: var(--text); }
+        .icon-btn:active { transform: scale(0.92); }
+
+        /* === MAIN === */
+        .app-main { max-width: 640px; margin: 0 auto; padding: 16px 16px 100px; }
+
+        /* === PASTAS === */
+        .pasta-bar { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; }
+        .pasta-btn {
+            flex-shrink: 0; padding: 8px 16px; border-radius: 100px; border: 1.5px solid var(--border);
+            background: var(--bg2); color: var(--text2); font-size: 13px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: all 0.2s ease; white-space: nowrap; font-family: inherit;
+        }
+        .pasta-btn:hover { border-color: var(--border2); color: var(--text); }
+        .pasta-btn:active { transform: scale(0.96); }
+        .pasta-btn.ativa {
+            background: linear-gradient(135deg, rgba(var(--primary-rgb),0.1), rgba(var(--secondary-rgb),0.08));
+            border-color: rgba(var(--primary-rgb),0.4);
+            color: var(--primary);
+        }
+
+        /* === CARDS === */
+        .card {
+            background: var(--bg2); border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--card-shadow);
+            padding: 20px; margin-bottom: 16px;
+            transition: box-shadow 0.3s ease, background-color 0.35s, border-color 0.35s;
+        }
+        .card:hover { box-shadow: var(--card-shadow-hover); }
+        .section-title {
+            font-size: 16px; font-weight: 700; margin-bottom: 14px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-title i { color: var(--primary); font-size: 15px; }
+
+        /* === INPUTS === */
+        .field {
+            width: 100%; padding: 14px 16px; border-radius: 14px;
+            border: 1.5px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 14px; font-family: inherit;
+            outline: none; transition: border-color 0.2s, box-shadow 0.2s, background-color 0.35s;
+            resize: none;
+        }
+        .field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.12);
+        }
+        .field::placeholder { color: var(--text3); }
+        .field-sm { padding: 10px 14px; font-size: 13px; border-radius: 12px; }
+
+        /* === BUTTONS === */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 11px 18px; border-radius: 14px; border: none;
+            font-size: 14px; font-weight: 600; font-family: inherit;
+            cursor: pointer; transition: all 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-ghost { background: var(--bg3); color: var(--text2); }
+        .btn-ghost:hover { background: var(--border); color: var(--text); }
+        .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(var(--primary-rgb),0.3); }
+        .btn-primary:hover { box-shadow: 0 4px 14px rgba(var(--primary-rgb),0.4); filter: brightness(1.08); }
+        .btn-success { background: var(--success); color: #fff; box-shadow: 0 2px 8px rgba(0,180,42,0.3); }
+        .btn-success:hover { filter: brightness(1.1); }
+        .btn-accent { background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(255,125,0,0.3); }
+        .btn-accent:hover { filter: brightness(1.1); }
+        .btn-outline-primary {
+            background: rgba(var(--primary-rgb),0.08); color: var(--primary);
+            border: 1.5px solid rgba(var(--primary-rgb),0.2);
+        }
+        .btn-outline-primary:hover { background: rgba(var(--primary-rgb),0.14); }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+        @media (min-width: 480px) { .btn-grid { grid-template-columns: repeat(4, 1fr); } }
+
+        /* === UPLOAD AREA === */
+        .upload-zone {
+            border: 2px dashed var(--border); border-radius: 16px;
+            padding: 32px 16px; text-align: center; cursor: pointer;
+            transition: border-color 0.25s, background-color 0.25s;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(var(--primary-rgb), 0.04);
+        }
+        .upload-zone i { font-size: 36px; color: var(--text3); margin-bottom: 10px; display: block; }
+        .upload-zone p { font-weight: 600; font-size: 14px; color: var(--text2); }
+        .upload-zone span { font-size: 12px; color: var(--text3); }
+
+        /* === PREVIEW === */
+        .preview-wrap { margin-top: 16px; }
+        .preview-wrap img {
+            width: 100%; max-height: 260px; object-fit: contain; border-radius: 14px;
+            background: var(--bg); border: 1px solid var(--border);
+        }
+
+        /* === ITEMS LIST === */
+        .item-card {
+            background: var(--bg2); border-radius: 18px;
+            border: 1px solid var(--border); box-shadow: var(--card-shadow);
+            padding: 16px; margin-bottom: 12px;
+            transition: box-shadow 0.3s, transform 0.3s, background-color 0.35s, border-color 0.35s;
+            will-change: transform, opacity; contain: layout style paint;
+        }
+        .item-card:hover { box-shadow: var(--card-shadow-hover); }
+        .item-card.removing { animation: fadeOut 0.28s ease-in both; }
+        .item-meta {
+            margin-top: 12px; padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+        }
+        .item-meta-info { font-size: 11px; color: var(--text3); font-weight: 500; }
+        .item-actions { display: flex; gap: 6px; }
+        .act-btn {
+            width: 32px; height: 32px; border-radius: 10px; border: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 12px; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .act-btn:active { transform: scale(0.88); }
+        .act-edit { background: rgba(var(--primary-rgb),0.08); color: var(--primary); }
+        .act-edit:hover { background: rgba(var(--primary-rgb),0.15); }
+        .act-copy { background: var(--bg3); color: var(--text2); }
+        .act-copy:hover { background: var(--border); }
+        .act-move { background: rgba(139,92,246,0.1); color: #8B5CF6; }
+        .act-move:hover { background: rgba(139,92,246,0.18); }
+        .act-del { background: rgba(245,63,63,0.08); color: var(--danger); }
+        .act-del:hover { background: rgba(245,63,63,0.16); }
+
+        .item-text { font-size: 14px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+        .item-img { width: 100%; max-height: 240px; object-fit: contain; border-radius: 12px; }
+        .download-wrap { display: flex; justify-content: center; margin-top: 10px; }
+
+        /* === COUNTER === */
+        .counter {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 24px; height: 22px; padding: 0 8px;
+            border-radius: 100px; font-size: 11px; font-weight: 700;
+            background: rgba(var(--primary-rgb),0.1); color: var(--primary);
+        }
+
+        /* === EMPTY STATE === */
+        .empty-state { text-align: center; padding: 48px 16px; color: var(--text3); }
+        .empty-state i { font-size: 44px; margin-bottom: 14px; opacity: 0.25; display: block; }
+        .empty-state p { font-size: 14px; font-weight: 500; }
+
+        /* === TOAST === */
+        .toast {
+            position: fixed; bottom: 28px; left: 50%; z-index: 100;
+            transform: translate3d(-50%, 0, 0);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .toast.show { opacity: 1; transform: translate3d(-50%, 0, 0); }
+        .toast-inner {
+            background: var(--bg2); color: var(--text);
+            border: 1px solid var(--border);
+            padding: 12px 20px; border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; font-weight: 600;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .toast-inner .t-icon { font-size: 16px; }
+        .toast-inner .t-success { color: var(--success); }
+        .toast-inner .t-error { color: var(--danger); }
+        .toast-inner .t-info { color: var(--primary); }
+
+        /* === MODAL === */
+        .modal-bg {
+            position: fixed; inset: 0; z-index: 60;
+            background: var(--modal-bg);
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            animation: fadeIn 0.2s ease;
+        }
+        .modal-sheet {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 61;
+            max-height: 85vh; overflow-y: auto;
+            background: var(--bg2); border-radius: 24px 24px 0 0;
+            padding: 24px 20px 36px;
+            box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+            animation: slideUp 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+            transition: background-color 0.35s;
+        }
+        .modal-handle { width: 36px; height: 4px; border-radius: 99px; background: var(--border); margin: 0 auto 18px; }
+        .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+        .modal-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); margin-bottom: 10px; }
+        .menu-item {
+            width: 100%; display: flex; align-items: center; gap: 14px;
+            padding: 14px 16px; border-radius: 14px; border: none;
+            background: var(--bg3); color: var(--text); font-size: 14px; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: background-color 0.15s, transform 0.12s;
+            text-decoration: none;
+        }
+        .menu-item:hover { background: var(--border); }
+        .menu-item:active { transform: scale(0.98); }
+        .menu-item i, .menu-item svg { width: 18px; text-align: center; color: var(--primary); flex-shrink: 0; }
+        .menu-item.danger { background: rgba(245,63,63,0.06); color: var(--danger); }
+        .menu-item.danger i { color: var(--danger); }
+        .menu-item.danger:hover { background: rgba(245,63,63,0.12); }
+
+        /* === LABEL === */
+        .field-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
+
+        /* === ANIMATIONS === */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translate3d(0, -8px, 0); } }
+        @keyframes slideUp { from { transform: translate3d(0, 100%, 0); } to { transform: translate3d(0, 0, 0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translate3d(0, 14px, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } }
+        .anim-in { animation: fadeInUp 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+        /* === DARK TOGGLE === */
+        .dark-toggle .fa-sun { display: none; }
+        .dark-toggle .fa-moon { display: inline; }
+        html.dark .dark-toggle .fa-sun { display: inline; color: #FBBF24; }
+        html.dark .dark-toggle .fa-moon { display: none; }
+
+        /* === SELECT === */
+        select.field {
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%236B7280' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 14px center;
+            padding-right: 36px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="logo-group">
+                <div class="logo-icon"><i class="fa-solid fa-copy"></i></div>
+                <div class="logo-text">Copia & Salva Pro</div>
+            </div>
+            <div class="header-actions">
+                <button id="btnOpcoes" class="icon-btn" title="Mais Opções"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                <button id="toggleTema" class="icon-btn dark-toggle" aria-label="Alternar tema">
+                    <i class="fa-solid fa-moon"></i><i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN -->
+    <main class="app-main">
+
+        <!-- PASTAS -->
+        <section class="pasta-bar no-scrollbar">
+            <button onclick="selecionarPasta('todas')" class="pasta-btn ativa pasta-item" data-pasta="todas">
+                <i class="fa-solid fa-border-all"></i> Tudo
+            </button>
+            <div id="listaPastas" class="flex gap-2"></div>
+            <button onclick="criarNovaPasta()" class="pasta-btn"><i class="fa-solid fa-plus"></i> Nova</button>
+        </section>
+
+        <!-- TEXTO -->
+        <section class="card anim-in">
+            <div class="section-title"><i class="fa-solid fa-pen-to-square"></i> Novo Conteudo</div>
+            <textarea id="textoEntrada" placeholder="Digite, cole texto, links, codigos..." class="field" style="height:120px"></textarea>
+            <div style="margin-top:10px">
+                <label class="field-label">Salvar na pasta:</label>
+                <select id="pastaSelecionada" class="field field-sm"></select>
+            </div>
+            <div class="btn-grid">
+                <button onclick="copiarTexto()" class="btn btn-ghost"><i class="fa-regular fa-copy"></i> Copiar</button>
+                <button onclick="colarTexto()" class="btn btn-ghost"><i class="fa-regular fa-clipboard"></i> Colar</button>
+                <button onclick="salvarTexto()" class="btn btn-success"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                <button onclick="compartilharConteudo()" class="btn btn-accent"><i class="fa-solid fa-share-nodes"></i> Enviar</button>
+            </div>
+        </section>
+
+        <!-- IMAGEM -->
+        <section class="card anim-in" style="animation-delay:0.06s">
+            <div class="section-title"><i class="fa-solid fa-image"></i> Imagem</div>
+            <input type="file" id="fotoEntrada" accept="image/*" class="hidden">
+            <label for="fotoEntrada" class="upload-zone" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <p>Toque para escolher imagem</p>
+                <span>Da galeria ou camera</span>
+            </label>
+            <div id="previewFoto" class="preview-wrap hidden">
+                <img id="imagemPreview" src="" alt="Previa">
+                <div class="btn-grid" style="grid-template-columns:1fr 1fr; margin-top:14px">
+                    <button id="btnSalvarFoto" class="btn btn-success" style="flex:1"><i class="fa-solid fa-floppy-disk"></i> <span id="btnSalvarFotoText">Salvar</span></button>
+                    <button onclick="compartilharFoto()" class="btn btn-accent" style="flex:1"><i class="fa-solid fa-share-nodes"></i> Enviar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- LISTA -->
+        <section class="card anim-in" style="animation-delay:0.12s">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap">
+                <div class="section-title" style="margin-bottom:0">
+                    <i class="fa-solid fa-box-archive"></i> Salvos
+                    <span id="contadorItens" class="counter">0</span>
+                </div>
+                <input type="text" id="busca" placeholder="Buscar..." class="field field-sm" style="width:180px; max-width:100%">
+            </div>
+            <div id="listaSalvos" style="min-height:80px">
+                <div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Nenhum conteudo salvo ainda</p></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- TOAST -->
+    <div id="notificacao" class="toast">
+        <div class="toast-inner">
+            <i id="iconeNotif" class="t-icon fa-solid fa-circle-check t-success"></i>
+            <span id="textoNotificacao"></span>
+        </div>
+    </div>
+
+    <!-- MODAL OPÇÕES -->
+    <div id="modalOpcoes" class="hidden">
+        <div class="modal-bg" onclick="fecharModalOpcoes()"></div>
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Opcoes</div>
+
+            <div class="modal-section-label">Dados</div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px">
+                <button onclick="exportarTexto()" class="menu-item"><i class="fa-solid fa-file-lines"></i> Exportar como Texto</button>
+                <button onclick="criarBackup()" class="menu-item"><i class="fa-solid fa-shield-halved"></i> Criar Backup</button>
+                <button onclick="restaurarBackup()" class="menu-item"><i class="fa-solid fa-rotate-left"></i> Restaurar Dados</button>
+                <button onclick="apagarTudo()" class="menu-item danger"><i class="fa-solid fa-trash-can"></i> Apagar Tudo</button>
+            </div>
+
+            <div class="modal-section-label">Comunidade</div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px">
+                <a href="https://t.me/+dVYoSM1zh4xkZjEx" target="_blank" rel="noopener" class="menu-item">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
+                    Telegram
+                </a>
+            </div>
+
+            <div class="modal-section-label">Sobre</div>
+            <p style="font-size:12px; color:var(--text3); line-height:1.6">Versao 2.0 &bull; Dados salvos apenas no seu aparelho.</p>
+        </div>
+    </div>
+
+    <!-- MODAL MOVER -->
+    <div id="modalMover" class="hidden">
+        <div class="modal-bg" onclick="fecharModalMover()"></div>
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">Mover para Pasta</div>
+            <div id="listaMoverPastas" style="display:flex; flex-direction:column; gap:8px"></div>
+        </div>
+    </div>
+
+    <input type="file" id="inputRestaurar" accept=".json" class="hidden">
+
+<script>
+(function(){
+'use strict';
+
+// === CACHE ===
+var _cc=null, _cp=null, _ci=true;
+function inv(){_ci=true}
+function getConteudos(){if(_cc===null||_ci){try{_cc=JSON.parse(localStorage.getItem('conteudosSalvos'))||[]}catch(e){_cc=[]}_ci=false}return _cc}
+function getPastas(){if(_cp===null||_ci){try{_cp=JSON.parse(localStorage.getItem('pastas'))||[]}catch(e){_cp=[]}}return _cp}
+function setConteudos(l){_cc=l;localStorage.setItem('conteudosSalvos',JSON.stringify(l))}
+function setPastas(l){_cp=l;localStorage.setItem('pastas',JSON.stringify(l))}
+
+// === DOM ===
+var $=function(id){return document.getElementById(id)};
+var textoEntrada=$('textoEntrada'), listaSalvos=$('listaSalvos'), contadorItens=$('contadorItens'),
+    buscaInput=$('busca'), previewFoto=$('previewFoto'), imagemPreview=$('imagemPreview'),
+    toggleTema=$('toggleTema'), listaPastasEl=$('listaPastas'), pastaSelecionadaEl=$('pastaSelecionada'),
+    btnOpcoes=$('btnOpcoes'), modalOpcoes=$('modalOpcoes'), modalMover=$('modalMover'),
+    listaMoverPastas=$('listaMoverPastas'), inputRestaurar=$('inputRestaurar'), dropZone=$('dropZone');
+var fotoAtual=null, pastaAtual='todas', itemIdEditando=null, moverItemId=null;
+
+// === UTILS ===
+var _escDiv=document.createElement('div');
+function esc(s){_escDiv.textContent=s;return _escDiv.innerHTML}
+function debounce(fn,d){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},d)}}
+
+// === COMPRESS ===
+function comprimir(arquivo){
+    return new Promise(function(ok,fail){
+        var u=URL.createObjectURL(arquivo), img=new Image();
+        img.onload=function(){URL.revokeObjectURL(u);tenta(0.8)};
+        img.onerror=function(){URL.revokeObjectURL(u);fail(new Error('formato'))};
+        img.src=u;
+        function tenta(q){
+            var c=document.createElement('canvas'),w=img.naturalWidth,h=img.naturalHeight,M=1200;
+            if(w>M){h=Math.round(h*M/w);w=M}if(h>M){w=Math.round(w*M/h);h=M}
+            c.width=Math.max(1,w);c.height=Math.max(1,h);
+            c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+            var d=c.toDataURL('image/jpeg',q);
+            if(d.length>1500000&&q>0.2)tenta(q-0.15);else ok(d);
+        }
+    });
+}
+
+// === TEMA ===
+toggleTema.addEventListener('click',function(){
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('tema',document.documentElement.classList.contains('dark')?'escuro':'claro');
+});
+function aplicarTema(){
+    var t=localStorage.getItem('tema');
+    if(t==='escuro'||(!t&&matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark');
+}
+
+// === PASTAS ===
+function initPastas(){if(!localStorage.getItem('pastas'))setPastas([{id:'geral',nome:'Geral'}]);atualizarPastas()}
+function atualizarPastas(){
+    var l=getPastas(),fb=document.createDocumentFragment(),fo=document.createDocumentFragment();
+    l.forEach(function(p){
+        var b=document.createElement('button');b.className='pasta-btn pasta-item';b.dataset.pasta=p.id;
+        b.innerHTML='<i class="fa-solid fa-folder"></i> '+esc(p.nome);
+        if(p.id===pastaAtual)b.classList.add('ativa');b.onclick=function(){selecionarPasta(p.id)};fb.appendChild(b);
+        var o=document.createElement('option');o.value=p.id;o.textContent=p.nome;fo.appendChild(o);
+    });
+    listaPastasEl.innerHTML='';listaPastasEl.appendChild(fb);
+    pastaSelecionadaEl.innerHTML='';pastaSelecionadaEl.appendChild(fo);
+}
+window.selecionarPasta=function(id){
+    pastaAtual=id;
+    document.querySelectorAll('.pasta-item').forEach(function(e){e.classList.remove('ativa')});
+    var a=document.querySelector('[data-pasta="'+id+'"]');if(a)a.classList.add('ativa');
+    carregarLista();
+};
+window.criarNovaPasta=function(){
+    var n=prompt('Nome da pasta:');if(!n||!n.trim())return;
+    var p=getPastas();p.push({id:'p_'+Date.now(),nome:n.trim()});setPastas(p);inv();atualizarPastas();aviso('Pasta criada!','sucesso');
+};
+
+// === BUSCA ===
+var buscaDB=debounce(function(v){carregarLista(v)},180);
+buscaInput.addEventListener('input',function(){buscaDB(buscaInput.value.trim().toLowerCase())});
+
+// === TEXTO ===
+window.copiarTexto=async function(){var t=textoEntrada.value.trim();if(!t)return aviso('Digite algo!','erro');try{await navigator.clipboard.writeText(t);aviso('Copiado!','sucesso')}catch(e){aviso('Nao foi possivel copiar','erro')}};
+window.colarTexto=async function(){try{textoEntrada.value=await navigator.clipboard.readText();aviso('Colado!','sucesso')}catch(e){aviso('Nao foi possivel colar','erro')}};
+window.salvarTexto=function(){
+    var t=textoEntrada.value.trim();if(!t)return aviso('Escreva algo!','erro');
+    var l=getConteudos();
+    if(itemIdEditando){
+        var i=l.findIndex(function(x){return String(x.id)===String(itemIdEditando)});
+        if(i!==-1){l[i].dados=t;l[i].data=new Date().toLocaleString('pt-BR');l[i].pasta=pastaSelecionadaEl.value}
+        itemIdEditando=null;
+    }else{l.unshift({id:Date.now(),tipo:'texto',dados:t,pasta:pastaSelecionadaEl.value,data:new Date().toLocaleString('pt-BR')})}
+    setConteudos(l);textoEntrada.value='';carregarLista(buscaInput.value.trim().toLowerCase());aviso('Salvo!','sucesso');
+};
+window.compartilharConteudo=async function(){
+    var t=textoEntrada.value.trim();if(!t)return aviso('Escreva algo!','erro');
+    try{await navigator.share({text:t})}catch(e){try{await navigator.clipboard.writeText(t);aviso('Copiado!','info')}catch(e2){aviso('Nao foi possivel','erro')}}
+};
+
+// === IMAGEM ===
+$('fotoEntrada').addEventListener('change',function(e){
+    var a=e.target.files[0];if(!a)return;if(!a.type.startsWith('image/'))return aviso('Selecione uma imagem','erro');
+    aviso('Processando...','info');$('btnSalvarFoto').disabled=true;$('btnSalvarFotoText').textContent='Processando...';
+    comprimir(a).then(function(d){fotoAtual=d;imagemPreview.src=d;previewFoto.classList.remove('hidden');aviso('Pronta! Clique em Salvar.','sucesso')})
+    .catch(function(e){aviso(e&&e.message==='formato'?'Formato nao suportado':'Erro ao processar','erro')})
+    .finally(function(){$('btnSalvarFoto').disabled=false;$('btnSalvarFotoText').textContent='Salvar'});
+});
+$('btnSalvarFoto').addEventListener('click',function(){if(!fotoAtual)return aviso('Selecione uma imagem','erro');salvarFoto()});
+function salvarFoto(){
+    if(!fotoAtual)return;var bt=$('btnSalvarFotoText'),b=$('btnSalvarFoto');b.disabled=true;bt.textContent='Salvando...';
+    var l=getConteudos();l.unshift({id:Date.now(),tipo:'foto',dados:fotoAtual,pasta:pastaSelecionadaEl.value,data:new Date().toLocaleString('pt-BR')});
+    setConteudos(l);fotoAtual=null;previewFoto.classList.add('hidden');$('fotoEntrada').value='';
+    b.disabled=false;bt.textContent='Salvar';carregarLista();aviso('Imagem salva!','sucesso');
+}
+window.compartilharFoto=async function(){
+    if(!fotoAtual)return aviso('Selecione uma imagem','erro');
+    try{if(navigator.canShare&&navigator.canShare({url:fotoAtual}))await navigator.share({url:fotoAtual});else{await navigator.clipboard.writeText(fotoAtual);aviso('Copiado!','sucesso')}}
+    catch(e){if(e.name!=='AbortError')aviso('Cancelado','info')}
+};
+
+// === DRAG & DROP ===
+['dragover','dragenter'].forEach(function(ev){dropZone.addEventListener(ev,function(e){e.preventDefault();dropZone.classList.add('drag-over')})});
+['dragleave','dragend','drop'].forEach(function(ev){dropZone.addEventListener(ev,function(e){e.preventDefault();dropZone.classList.remove('drag-over')})});
+dropZone.addEventListener('drop',function(e){
+    var f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/')){
+        var dt=new DataTransfer();dt.items.add(f);$('fotoEntrada').files=dt.files;$('fotoEntrada').dispatchEvent(new Event('change'));
+    }
+});
+
+// === RENDER LISTA ===
+function carregarLista(filtro){
+    filtro=filtro||'';var l=getConteudos().slice();
+    if(pastaAtual!=='todas')l=l.filter(function(i){return i.pasta===pastaAtual});
+    if(filtro)l=l.filter(function(i){return i.tipo==='texto'&&i.dados.toLowerCase().includes(filtro)});
+    contadorItens.textContent=l.length;
+    if(!l.length){listaSalvos.innerHTML=filtro?'<div class="empty-state"><p>Nenhum resultado</p></div>':'<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Nenhum conteudo salvo ainda</p></div>';return}
+    var mp={};getPastas().forEach(function(p){mp[p.id]=p.nome});
+    var frag=document.createDocumentFragment();
+    for(var i=0;i<l.length;i++){
+        var it=l[i],np=mp[it.pasta]||'Geral',tx=it.tipo==='texto',d=Math.min(i*0.04,0.4);
+        var div=document.createElement('div');div.className='item-card anim-in';div.style.animationDelay=d+'s';
+        if(tx){
+            var p=document.createElement('p');p.className='item-text';p.textContent=it.dados;div.appendChild(p);
+        }else{
+            var img=document.createElement('img');img.src=it.dados;img.className='item-img';img.loading='lazy';img.alt='Foto';
+            img.onerror=function(){this.style.display='none'};div.appendChild(img);
+            var dw=document.createElement('div');dw.className='download-wrap';
+            var db=document.createElement('button');db.className='btn btn-outline-primary';db.style.cssText='font-size:13px;padding:9px 18px';
+            db.innerHTML='<i class="fa-solid fa-download"></i> Baixar';db.onclick=(function(id){return function(){baixarFoto(id)}})(it.id);
+            dw.appendChild(db);div.appendChild(dw);
+        }
+        var meta=document.createElement('div');meta.className='item-meta';
+        var info=document.createElement('span');info.className='item-meta-info';info.textContent=it.data+' \u2022 '+np;meta.appendChild(info);
+        var acts=document.createElement('div');acts.className='item-actions';
+        if(tx){
+            var be=document.createElement('button');be.className='act-btn act-edit';be.title='Editar';be.innerHTML='<i class="fa-solid fa-pen"></i>';be.onclick=(function(id){return function(){editarItem(id)}})(it.id);acts.appendChild(be);
+            var bc=document.createElement('button');bc.className='act-btn act-copy';bc.title='Copiar';bc.innerHTML='<i class="fa-regular fa-copy"></i>';bc.onclick=(function(id){return function(){copiarItem(id)}})(it.id);acts.appendChild(bc);
+        }
+        var bm=document.createElement('button');bm.className='act-btn act-move';bm.title='Mover';bm.innerHTML='<i class="fa-solid fa-folder"></i>';bm.onclick=(function(id){return function(){moverItem(id)}})(it.id);acts.appendChild(bm);
+        var bd=document.createElement('button');bd.className='act-btn act-del';bd.title='Excluir';bd.innerHTML='<i class="fa-solid fa-trash-can"></i>';bd.onclick=(function(id,el){return function(){apagarItem(id,el)}})(it.id,div);acts.appendChild(bd);
+        meta.appendChild(acts);div.appendChild(meta);frag.appendChild(div);
+    }
+    listaSalvos.innerHTML='';listaSalvos.appendChild(frag);
+}
+
+// === ACOES ITENS ===
+function findItem(id){return getConteudos().find(function(i){return String(i.id)===String(id)})||null}
+window.baixarFoto=function(id){var it=findItem(id);if(!it||!it.dados)return;var a=document.createElement('a');a.href=it.dados;a.download='foto_'+id+'.jpg';document.body.appendChild(a);a.click();document.body.removeChild(a);aviso('Baixando...','sucesso')};
+window.copiarItem=async function(id){var it=findItem(id);if(!it)return;if(it.tipo==='texto'){try{await navigator.clipboard.writeText(it.dados);aviso('Copiado!','sucesso')}catch(e){aviso('Erro','erro')}}else aviso('Use Baixar foto','info')};
+window.editarItem=function(id){var it=findItem(id);if(!it||it.tipo!=='texto')return;itemIdEditando=id;textoEntrada.value=it.dados;textoEntrada.focus();scrollTo({top:0,behavior:'smooth'});aviso('Edite e salve','info')};
+window.moverItem=function(id){
+    var it=findItem(id);if(!it)return;moverItemId=id;
+    var h='';getPastas().forEach(function(p){
+        var at=p.id===it.pasta?' ring-2 ring-primary':'';
+        h+='<button onclick="confirmarMover(\''+p.id+'\')" class="menu-item'+at+'"><i class="fa-solid fa-folder"></i>'+esc(p.nome)+'</button>';
+    });listaMoverPastas.innerHTML=h;modalMover.classList.remove('hidden');
+};
+window.confirmarMover=function(pid){
+    if(!moverItemId)return;var l=getConteudos(),it=l.find(function(x){return String(x.id)===String(moverItemId)});
+    if(it){it.pasta=pid;setConteudos(l)}fecharModalMover();carregarLista(buscaInput.value.trim().toLowerCase());aviso('Movido!','sucesso');
+};
+function fecharModalMover(){modalMover.classList.add('hidden');moverItemId=null}
+window.fecharModalMover=fecharModalMover;
+window.apagarItem=function(id,el){
+    if(el){el.classList.add('removing');setTimeout(function(){execExcluir(id)},260)}
+    else{if(!confirm('Excluir?'))return;execExcluir(id)}
+};
+function execExcluir(id){var n=getConteudos().filter(function(i){return String(i.id)!==String(id)});setConteudos(n);carregarLista(buscaInput.value.trim().toLowerCase());aviso('Excluido!','sucesso')}
+
+// === MODAL OPCOES ===
+btnOpcoes.addEventListener('click',function(){modalOpcoes.classList.remove('hidden')});
+window.fecharModalOpcoes=function(){modalOpcoes.classList.add('hidden')};
+window.exportarTexto=function(){
+    var d=getConteudos();if(!d.length)return aviso('Nenhum dado','erro');
+    var t='=== Copia & Salva Pro ===\n'+new Date().toLocaleString('pt-BR')+'\n\n';
+    d.forEach(function(i){t+=i.data+'\n'+(i.tipo==='texto'?i.dados:'[Imagem]')+'\n---\n'});
+    dl(t,'dados.txt','text/plain');fecharModalOpcoes();aviso('Exportado!','sucesso');
+};
+window.criarBackup=function(){
+    var d={data:new Date().toLocaleString('pt-BR'),pastas:getPastas(),conteudos:getConteudos()};
+    dl(JSON.stringify(d,null,2),'backup.json','application/json');fecharModalOpcoes();aviso('Backup criado!','sucesso');
+};
+window.restaurarBackup=function(){fecharModalOpcoes();inputRestaurar.click()};
+inputRestaurar.addEventListener('change',function(e){
+    var f=e.target.files[0];if(!f)return;var r=new FileReader();
+    r.onload=function(res){try{var d=JSON.parse(res.target.result);if(!d.conteudos)throw 0;
+        if(confirm('Adicionar aos existentes?\n\nOK = Adicionar\nCancelar = Substituir')){setConteudos(d.conteudos.concat(getConteudos()))}else{setConteudos(d.conteudos)}
+        if(d.pastas)setPastas(d.pastas);inv();atualizarPastas();carregarLista();aviso('Restaurado!','sucesso');
+    }catch(e){aviso('Arquivo invalido!','erro')}};r.readAsText(f);this.value='';
+});
+window.apagarTudo=function(){if(confirm('TEM CERTEZA? Apaga TUDO!')&&confirm('Ultima chance!')){localStorage.removeItem('conteudosSalvos');localStorage.removeItem('pastas');inv();_cc=[];_cp=[];initPastas();carregarLista();fecharModalOpcoes();aviso('Tudo apagado.','sucesso')}};
+function dl(c,n,t){var b=new Blob([c],{type:t}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
+
+// === TOAST ===
+var _at=null;
+function aviso(msg,tipo){
+    var el=$('notificacao'),ic=$('iconeNotif'),tx=$('textoNotificacao');
+    var m={sucesso:'fa-solid fa-circle-check t-success',erro:'fa-solid fa-circle-xmark t-error',info:'fa-solid fa-circle-info t-info'};
+    ic.className='t-icon '+(m[tipo]||m.info);tx.textContent=msg;
+    if(_at)clearTimeout(_at);el.classList.add('show');
+    _at=setTimeout(function(){el.classList.remove('show')},2400);
+}
+
+// === INIT ===
+window.addEventListener('DOMContentLoaded',function(){aplicarTema();initPastas();carregarLista()});
+})();
+</script>
+</body>
+</html>
